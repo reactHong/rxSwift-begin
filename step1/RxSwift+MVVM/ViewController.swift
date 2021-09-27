@@ -32,7 +32,7 @@ class ViewController: UIViewController {
         })
     }
 
-    private func downloadJson(_ completed: @escaping (_ json: String?)->Void) {
+    private func downloadJson(_ completed: ((String?)->Void)?) {
         
         DispatchQueue.global().async {
             let url = URL(string: MEMBER_LIST_URL)!
@@ -40,7 +40,7 @@ class ViewController: UIViewController {
             let json = String(data: data, encoding: .utf8)
             
             DispatchQueue.main.async {
-                completed(json)
+                completed?(json)
             }
         }
     }
