@@ -12,6 +12,26 @@ import UIKit
 
 let MEMBER_LIST_URL = "https://my.api.mockaroo.com/members_with_avatar.json?key=44ce18f0"
 
+
+class Observable<T> {
+    
+    let task: (()->T)?
+    
+    init(_ task: (()->T)?) {
+        self.task = task
+    }
+    
+    func subscribe(_ complete: @escaping (T?)->Void) {
+        DispatchQueue.global().async {
+            let value = self.task?()
+            
+            DispatchQueue.main.async {
+                complete(value)
+            }
+        }
+    }
+}
+
 class ViewController: UIViewController {
     @IBOutlet var timerLabel: UILabel!
     @IBOutlet var editView: UITextView!
@@ -32,17 +52,14 @@ class ViewController: UIViewController {
         })
     }
 
-    private func downloadJson(_ completed: ((String?)->Void)?) {
-        
-        DispatchQueue.global().async {
+    private func downloadJson() -> Observable<String> {
+        return Observable({
             let url = URL(string: MEMBER_LIST_URL)!
             let data = try! Data(contentsOf: url)
             let json = String(data: data, encoding: .utf8)
             
-            DispatchQueue.main.async {
-                completed?(json)
-            }
-        }
+            return json!
+        })
     }
     
     // MARK: SYNC
@@ -53,7 +70,8 @@ class ViewController: UIViewController {
         editView.text = ""
         setVisibleWithAnimation(activityIndicator, true)
 
-        self.downloadJson { json in
+        let observable = self.downloadJson()
+        observable.subscribe { json in
             self.editView.text = json
             self.setVisibleWithAnimation(self.activityIndicator, false)
         }
