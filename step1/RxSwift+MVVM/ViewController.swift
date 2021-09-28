@@ -15,20 +15,14 @@ let MEMBER_LIST_URL = "https://my.api.mockaroo.com/members_with_avatar.json?key=
 
 class Observable<T> {
     
-    let task: (()->T)?
+    let task: ((_ f: ((T?)->Void)?)->Void)
     
-    init(_ task: (()->T)?) {
+    init(_ task: @escaping ((((T?)->Void)?)->Void)) {
         self.task = task
     }
     
-    func subscribe(_ complete: @escaping (T?)->Void) {
-        DispatchQueue.global().async {
-            let value = self.task?()
-            
-            DispatchQueue.main.async {
-                complete(value)
-            }
-        }
+    func subscribe(_ f: ((T?)->Void)?) {
+        self.task(f)
     }
 }
 
@@ -53,13 +47,17 @@ class ViewController: UIViewController {
     }
 
     private func downloadJson() -> Observable<String> {
-        return Observable({
-            let url = URL(string: MEMBER_LIST_URL)!
-            let data = try! Data(contentsOf: url)
-            let json = String(data: data, encoding: .utf8)
-            
-            return json!
-        })
+        return Observable() { complete in
+            DispatchQueue.global().async {
+                let url = URL(string: MEMBER_LIST_URL)!
+                let data = try! Data(contentsOf: url)
+                let json = String(data: data, encoding: .utf8)
+                
+                DispatchQueue.main.async {
+                    complete?(json)
+                }
+            }
+        }
     }
     
     // MARK: SYNC
@@ -70,7 +68,7 @@ class ViewController: UIViewController {
         editView.text = ""
         setVisibleWithAnimation(activityIndicator, true)
 
-        let observable = self.downloadJson()
+        let observable: Observable<String> = self.downloadJson()
         observable.subscribe { json in
             self.editView.text = json
             self.setVisibleWithAnimation(self.activityIndicator, false)
