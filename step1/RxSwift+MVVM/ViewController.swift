@@ -85,6 +85,6 @@ class ViewController: UIViewController {
                 }
             }
         
-        disposable.dispose()
+        //disposable.dispose()
     }
 }
