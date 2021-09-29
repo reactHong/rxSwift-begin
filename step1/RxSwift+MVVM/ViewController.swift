@@ -13,18 +13,18 @@ import UIKit
 let MEMBER_LIST_URL = "https://my.api.mockaroo.com/members_with_avatar.json?key=44ce18f0"
 
 
-class Observable<T> {
-    
-    private let task: (@escaping (T) -> Void) -> Void
-    
-    init(_ task: @escaping (@escaping (T) -> Void) -> Void) {
-        self.task = task
-    }
-    
-    func subscribe(_ f: @escaping (T) -> Void) {
-        self.task(f)
-    }
-}
+//class Observable<T> {
+//
+//    private let task: (@escaping (T) -> Void) -> Void
+//
+//    init(_ task: @escaping (@escaping (T) -> Void) -> Void) {
+//        self.task = task
+//    }
+//
+//    func subscribe(_ f: @escaping (T) -> Void) {
+//        self.task(f)
+//    }
+//}
 
 class ViewController: UIViewController {
     @IBOutlet var timerLabel: UILabel!
@@ -47,16 +47,19 @@ class ViewController: UIViewController {
     }
 
     private func downloadJson() -> Observable<String?> {
-        return Observable() { f in
+        return Observable.create() { f in
             DispatchQueue.global().async {
                 let url = URL(string: MEMBER_LIST_URL)!
                 let data = try! Data(contentsOf: url)
                 let json = String(data: data, encoding: .utf8)
                 
                 DispatchQueue.main.async {
-                    f(json)
+                    f.onNext(json)
+                    f.onCompleted()
                 }
             }
+            
+            return Disposables.create()
         }
     }
     
@@ -68,10 +71,20 @@ class ViewController: UIViewController {
         editView.text = ""
         setVisibleWithAnimation(activityIndicator, true)
 
-        let observable: Observable<String?> = self.downloadJson()
-        observable.subscribe { json in
-            self.editView.text = json
-            self.setVisibleWithAnimation(self.activityIndicator, false)
-        }
+        let disposable: Disposable = self.downloadJson()
+            .subscribe { [weak self] event in
+                switch(event) {
+                case .next(let json):
+                    self?.editView.text = json
+                    self?.setVisibleWithAnimation(self?.activityIndicator, false)
+                    break
+                case .completed:
+                    break
+                case .error:
+                    break
+                }
+            }
+        
+        disposable.dispose()
     }
 }
